@@ -27,7 +27,7 @@ function SeloImpresso({
   endereco,
   dataEntrega,
   componentRef,
-}: SeloPreviewProps & { componentRef: React.RefObject<HTMLDivElement> }) {
+}: SeloPreviewProps & { componentRef: React.RefObject<HTMLDivElement | null> }) {
   // Gerar URL do QR Code usando API pública
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(token)}`
 
