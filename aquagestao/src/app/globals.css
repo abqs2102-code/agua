@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 210 29% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 29% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 29% 17%;
+    --primary: 166 79% 28%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 20% 94%;
+    --secondary-foreground: 210 29% 17%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 210 15% 45%;
+    --accent: 210 20% 94%;
+    --accent-foreground: 210 29% 17%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 20% 88%;
+    --input: 210 20% 88%;
+    --ring: 166 79% 28%;
+    --radius: 0.5rem;
+
+    /* Paleta AquaGestão */
+    --navy: #061525;
+    --navy2: #0C2340;
+    --teal: #0B7A63;
+    --teal2: #0D9278;
+    --sky: #38BDF8;
+    --cream: #F5F2EC;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
