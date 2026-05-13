@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { CheckCircle, MapPin, Phone, QrCode, AlertTriangle } from 'lucide-react'
+import { QRScanner } from '@/components/entregador/QRScanner'
 
 type Entrega = {
   id: string
@@ -37,12 +38,9 @@ function BotaoExterno({ url, cor, bg, icone, label }: {
   icone: React.ReactNode
   label: string
 }) {
-  function abrir() {
-    window.open(url, '_blank')
-  }
   return (
     <button
-      onClick={abrir}
+      onClick={() => window.open(url, '_blank')}
       className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium"
       style={{ background: bg, color: cor }}
     >
@@ -58,12 +56,14 @@ function EntregaCard({
   atualizando,
   onExpand,
   onAtualizarStatus,
+  onAbrirScanner,
 }: {
   entrega: Entrega
   expandida: boolean
   atualizando: boolean
   onExpand: () => void
   onAtualizarStatus: (id: string, status: string) => void
+  onAbrirScanner: (entregaId: string) => void
 }) {
   const cliente = (entrega.clientes as any)
   const status = statusConfig[entrega.status] ?? statusConfig.agendada
@@ -173,12 +173,20 @@ function EntregaCard({
           {entrega.status === 'saiu' && (
             <div className="space-y-2">
               <button
+                onClick={() => onAbrirScanner(entrega.id)}
+                className="w-full py-3 rounded-xl text-white font-semibold flex items-center justify-center gap-2"
+                style={{ background: '#061525' }}
+              >
+                <QrCode size={18} />
+                Escanear galão vazio
+              </button>
+              <button
                 onClick={() => onAtualizarStatus(entrega.id, 'entregue')}
                 disabled={atualizando}
                 className="w-full py-3 rounded-xl text-sm font-semibold text-white"
                 style={{ background: '#0D9278' }}
               >
-                {atualizando ? 'Confirmando...' : '✓ Confirmar entrega'}
+                {atualizando ? 'Confirmando...' : '✓ Confirmar sem QR'}
               </button>
               <button
                 onClick={() => onAtualizarStatus(entrega.id, 'nao_realizada')}
@@ -211,6 +219,13 @@ export default function EntregadorPage() {
   const [carregando, setCarregando] = useState(true)
   const [atualizando, setAtualizando] = useState<string | null>(null)
   const [entregaExpandida, setEntregaExpandida] = useState<string | null>(null)
+  const [scannerAberto, setScannerAberto] = useState(false)
+  const [entregaParaScan, setEntregaParaScan] = useState<string | null>(null)
+  const [resultadoValidacao, setResultadoValidacao] = useState<{
+    sucesso: boolean
+    mensagem: string
+    entregaId: string
+  } | null>(null)
 
   useEffect(() => {
     fetchEntregas()
@@ -242,6 +257,31 @@ export default function EntregadorPage() {
     setEntregaExpandida(null)
   }
 
+  async function handleScan(token: string, entregaId: string) {
+    setScannerAberto(false)
+    try {
+      const response = await fetch(`/api/selos/${encodeURIComponent(token)}/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entrega_id: entregaId }),
+      })
+      const data = await response.json()
+      setResultadoValidacao({
+        sucesso: response.ok,
+        mensagem: response.ok
+          ? 'Galão validado! Endereço confirmado.'
+          : data.error ?? 'Divergência detectada.',
+        entregaId,
+      })
+    } catch {
+      setResultadoValidacao({
+        sucesso: false,
+        mensagem: 'Erro ao validar o selo.',
+        entregaId,
+      })
+    }
+  }
+
   const pendentes = entregas.filter(e => e.status === 'agendada' || e.status === 'saiu')
   const concluidas = entregas.filter(e =>
     e.status === 'entregue' || e.status === 'nao_realizada' || e.status === 'multa'
@@ -257,6 +297,77 @@ export default function EntregadorPage() {
 
   return (
     <div className="px-4 py-4 max-w-lg mx-auto">
+
+      {/* Scanner QR */}
+      {scannerAberto && entregaParaScan && (
+        <QRScanner
+          onScan={(token) => handleScan(token, entregaParaScan)}
+          onFechar={() => setScannerAberto(false)}
+        />
+      )}
+
+      {/* Resultado da validação */}
+      {resultadoValidacao && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 pb-8 px-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <div className="text-center mb-4">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3"
+                style={{
+                  background: resultadoValidacao.sucesso
+                    ? 'rgba(13,146,120,0.1)'
+                    : 'rgba(239,68,68,0.1)'
+                }}
+              >
+                <span className="text-3xl">
+                  {resultadoValidacao.sucesso ? '✓' : '✗'}
+                </span>
+              </div>
+              <p className="font-semibold text-lg" style={{ color: '#061525' }}>
+                {resultadoValidacao.sucesso ? 'Validado!' : 'Divergência!'}
+              </p>
+              <p className="text-sm mt-1" style={{ color: '#5C6E7E' }}>
+                {resultadoValidacao.mensagem}
+              </p>
+            </div>
+            <div className="space-y-2">
+              {resultadoValidacao.sucesso && (
+                <button
+                  onClick={() => {
+                    atualizarStatus(resultadoValidacao.entregaId, 'entregue')
+                    setResultadoValidacao(null)
+                  }}
+                  className="w-full py-3 rounded-xl text-white font-semibold"
+                  style={{ background: '#0D9278' }}
+                >
+                  ✓ Confirmar entrega
+                </button>
+              )}
+              {!resultadoValidacao.sucesso && (
+                <button
+                  onClick={() => {
+                    atualizarStatus(resultadoValidacao.entregaId, 'multa')
+                    setResultadoValidacao(null)
+                  }}
+                  className="w-full py-3 rounded-xl text-white font-semibold"
+                  style={{ background: '#EF4444' }}
+                >
+                  Registrar divergência
+                </button>
+              )}
+              <button
+                onClick={() => setResultadoValidacao(null)}
+                className="w-full py-3 rounded-xl font-medium border"
+                style={{ borderColor: '#DDE5ED', color: '#5C6E7E' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Resumo do dia */}
       <div className="rounded-2xl p-4 mb-6" style={{ background: '#061525' }}>
         <p className="text-xs font-medium mb-3" style={{ color: 'rgba(255,255,255,0.5)' }}>
           HOJE · {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -300,6 +411,10 @@ export default function EntregadorPage() {
                     entregaExpandida === entrega.id ? null : entrega.id
                   )}
                   onAtualizarStatus={atualizarStatus}
+                  onAbrirScanner={(id) => {
+                    setEntregaParaScan(id)
+                    setScannerAberto(true)
+                  }}
                 />
               ))}
             </>
@@ -317,6 +432,7 @@ export default function EntregadorPage() {
                   atualizando={false}
                   onExpand={() => {}}
                   onAtualizarStatus={atualizarStatus}
+                  onAbrirScanner={() => {}}
                 />
               ))}
             </>
