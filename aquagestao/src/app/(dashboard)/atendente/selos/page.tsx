@@ -19,6 +19,7 @@ type Entrega = {
 
 type SeloGerado = {
   token: string
+  codigoQr: string
   numeroSerie: string
   clienteNome: string
   endereco: any
@@ -78,12 +79,13 @@ export default function SelosPage() {
     const cliente = (entrega?.clientes as any)
 
     setSeloGerado({
-      token: data.token,
-      numeroSerie: galao?.numero_serie ?? '',
-      clienteNome: cliente?.nome ?? '',
-      endereco: cliente?.endereco_json ?? {},
-      dataEntrega: entrega?.data_agendada ?? '',
-    })
+  token: data.token,
+  codigoQr: data.codigo_qr,
+  numeroSerie: galao?.numero_serie ?? '',
+  clienteNome: cliente?.nome ?? '',
+  endereco: cliente?.endereco_json ?? {},
+  dataEntrega: entrega?.data_agendada ?? '',
+})
 
     setEntregaSelecionada(entregaId)
     setGerando(null)

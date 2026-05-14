@@ -257,10 +257,10 @@ export default function EntregadorPage() {
     setEntregaExpandida(null)
   }
 
-  async function handleScan(token: string, entregaId: string) {
+  async function handleScan(codigoQr: string, entregaId: string) {
     setScannerAberto(false)
     try {
-      const response = await fetch(`/api/selos/${encodeURIComponent(token)}/validate`, {
+      const response = await fetch(`/api/selos/${encodeURIComponent(codigoQr)}/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ entrega_id: entregaId }),

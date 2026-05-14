@@ -7,6 +7,7 @@ import { Printer } from 'lucide-react'
 
 type SeloPreviewProps = {
   token: string
+  codigoQr: string
   numeroSerie: string
   clienteNome: string
   endereco: {
@@ -19,17 +20,16 @@ type SeloPreviewProps = {
   dataEntrega: string
 }
 
-// Componente que será impresso
 function SeloImpresso({
-  token,
+  codigoQr,
   numeroSerie,
   clienteNome,
   endereco,
   dataEntrega,
   componentRef,
 }: SeloPreviewProps & { componentRef: React.RefObject<HTMLDivElement | null> }) {
-  // Gerar URL do QR Code usando API pública
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(token)}`
+  // QR Code contém apenas o código curto — fácil de ler
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(codigoQr)}&ecc=H&margin=2`
 
   return (
     <div
@@ -60,6 +60,15 @@ function SeloImpresso({
           marginTop: '1mm',
           fontFamily: 'monospace',
           color: '#333',
+          letterSpacing: '0.05em',
+        }}>
+          {codigoQr}
+        </p>
+        <p style={{
+          fontSize: '4.5pt',
+          textAlign: 'center',
+          fontFamily: 'monospace',
+          color: '#999',
         }}>
           {numeroSerie}
         </p>
@@ -67,7 +76,6 @@ function SeloImpresso({
 
       {/* Dados */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        {/* Logo / Nome */}
         <div style={{
           fontSize: '9pt',
           fontWeight: 'bold',
@@ -79,23 +87,19 @@ function SeloImpresso({
           Aqua<span style={{ color: '#0D9278' }}>Gestão</span>
         </div>
 
-        {/* Cliente */}
         <p style={{ fontSize: '7pt', fontWeight: 'bold', color: '#061525', marginBottom: '1mm', lineHeight: 1.2 }}>
           {clienteNome}
         </p>
 
-        {/* Endereço */}
         <p style={{ fontSize: '6pt', color: '#444', lineHeight: 1.3, marginBottom: '1mm' }}>
           {endereco.logradouro}, {endereco.numero}<br />
           {endereco.bairro} — {endereco.cidade}/{endereco.uf}
         </p>
 
-        {/* Data */}
         <p style={{ fontSize: '6pt', color: '#666' }}>
           Entrega: {new Date(dataEntrega + 'T12:00:00').toLocaleDateString('pt-BR')}
         </p>
 
-        {/* Aviso anti-fraude */}
         <p style={{
           fontSize: '4.5pt',
           color: '#999',
@@ -127,14 +131,9 @@ export function SeloPreview(props: SeloPreviewProps) {
 
   return (
     <div className="space-y-4">
-      {/* Preview na tela */}
-      <div className="flex justify-center">
-        <div style={{ transform: 'scale(2)', transformOrigin: 'top center', marginBottom: '80px' }}>
-          <SeloImpresso {...props} componentRef={componentRef} />
-        </div>
+      <div style={{ transform: 'scale(2)', transformOrigin: 'top center', marginBottom: '80px' }}>
+        <SeloImpresso {...props} componentRef={componentRef} />
       </div>
-
-      {/* Botão imprimir */}
       <div className="flex justify-center pt-4">
         <Button
           onClick={() => handlePrint()}

@@ -3,7 +3,6 @@ import crypto from 'crypto'
 
 const HMAC_SECRET = process.env.SEAL_HMAC_SECRET!
 
-// Dados necessários para gerar um selo
 export type SealData = {
   entrega_id: string
   galao_id: string
@@ -19,18 +18,27 @@ export type SealData = {
   }
 }
 
+// Gera código curto legível ex: AQ-8F3K2P
+export function generateCodigoQr(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let codigo = 'AQ-'
+  for (let i = 0; i < 6; i++) {
+    codigo += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return codigo
+}
+
 // Gera o token JWT assinado com HMAC-SHA256
 export function generateSealToken(data: SealData): string {
   const payload = {
-    eid: data.entrega_id,       // entrega_id
-    gid: data.galao_id,         // galao_id
-    ns:  data.numero_serie,     // numero_serie
-    cid: data.cliente_id,       // cliente_id
-    cn:  data.cliente_nome,     // cliente_nome
-    end: data.endereco,         // endereco completo
+    eid: data.entrega_id,
+    gid: data.galao_id,
+    ns:  data.numero_serie,
+    cid: data.cliente_id,
+    cn:  data.cliente_nome,
+    end: data.endereco,
     iat: Math.floor(Date.now() / 1000),
   }
-
   return jwt.sign(payload, HMAC_SECRET, { algorithm: 'HS256' })
 }
 
