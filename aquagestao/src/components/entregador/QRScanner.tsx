@@ -74,8 +74,10 @@ export function QRScanner({ onScan, onFechar }: QRScannerProps) {
           pararCamera()
           const rawValue = barcodes[0].rawValue
           // Extrair código da URL ou usar direto
+          console.log('QR lido:', rawValue)
           const match = rawValue.match(/\/validar\/([A-Z0-9-]+)$/)
           const codigo = match ? match[1] : rawValue
+          console.log('Código extraído:', codigo)
           onScan(codigo)
           return
         }
