@@ -29,7 +29,9 @@ function SeloImpresso({
   componentRef,
 }: SeloPreviewProps & { componentRef: React.RefObject<HTMLDivElement | null> }) {
   // QR Code contém apenas o código curto — fácil de ler
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(codigoQr)}&ecc=H&margin=2`
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+  `https://agua-alpha.vercel.app/validar/${codigoQr}`
+)}&ecc=H&margin=2`
 
   return (
     <div
@@ -54,16 +56,6 @@ function SeloImpresso({
           alt="QR Code"
           style={{ width: '2.8cm', height: '2.8cm', display: 'block' }}
         />
-        <p style={{
-          fontSize: '5pt',
-          textAlign: 'center',
-          marginTop: '1mm',
-          fontFamily: 'monospace',
-          color: '#333',
-          letterSpacing: '0.05em',
-        }}>
-          {codigoQr}
-        </p>
         <p style={{
           fontSize: '4.5pt',
           textAlign: 'center',

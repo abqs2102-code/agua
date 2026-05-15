@@ -72,7 +72,11 @@ export function QRScanner({ onScan, onFechar }: QRScannerProps) {
         if (barcodes.length > 0) {
           processandoRef.current = true
           pararCamera()
-          onScan(barcodes[0].rawValue)
+          const rawValue = barcodes[0].rawValue
+          // Extrair código da URL ou usar direto
+          const match = rawValue.match(/\/validar\/([A-Z0-9-]+)$/)
+          const codigo = match ? match[1] : rawValue
+          onScan(codigo)
           return
         }
       }
