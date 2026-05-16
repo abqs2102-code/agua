@@ -257,30 +257,31 @@ export default function EntregadorPage() {
     setEntregaExpandida(null)
   }
 
-  async function handleScan(codigoQr: string, entregaId: string) {
-    setScannerAberto(false)
-    try {
-      const response = await fetch(`/api/selos/${encodeURIComponent(codigoQr)}/validate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entrega_id: entregaId }),
-      })
-      const data = await response.json()
-      setResultadoValidacao({
-        sucesso: response.ok,
-        mensagem: response.ok
-          ? 'Galão validado! Endereço confirmado.'
-          : data.error ?? 'Divergência detectada.',
-        entregaId,
-      })
-    } catch {
-      setResultadoValidacao({
-        sucesso: false,
-        mensagem: 'Erro ao validar o selo.',
-        entregaId,
-      })
-    }
+async function handleScan(token: string, entregaId: string) {
+  setScannerAberto(false)
+  try {
+    // entrega_id vai na URL, JWT vai no body
+    const response = await fetch(`/api/selos/${entregaId}/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    })
+    const data = await response.json()
+    setResultadoValidacao({
+      sucesso: response.ok && data.sucesso,
+      mensagem: response.ok && data.sucesso
+        ? `Galão validado! Cliente: ${data.cliente_nome}`
+        : data.error ?? 'Divergência detectada.',
+      entregaId,
+    })
+  } catch {
+    setResultadoValidacao({
+      sucesso: false,
+      mensagem: 'Erro ao validar o selo.',
+      entregaId,
+    })
   }
+}
 
   const pendentes = entregas.filter(e => e.status === 'agendada' || e.status === 'saiu')
   const concluidas = entregas.filter(e =>

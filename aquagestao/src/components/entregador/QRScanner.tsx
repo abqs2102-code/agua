@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 
 type QRScannerProps = {
-  onScan: (resultado: string) => void
+  onScan: (token: string) => void  // agora recebe o JWT completo
   onFechar: () => void
 }
 
@@ -65,20 +65,16 @@ export function QRScanner({ onScan, onFechar }: QRScannerProps) {
     ctx.drawImage(video, 0, 0)
 
     try {
-      // Usar BarcodeDetector se disponível (nativo no Android/Chrome)
       if ('BarcodeDetector' in window) {
         const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] })
         const barcodes = await detector.detect(canvas)
         if (barcodes.length > 0) {
           processandoRef.current = true
           pararCamera()
+
           const rawValue = barcodes[0].rawValue
-          // Extrair código da URL ou usar direto
-          console.log('QR lido:', rawValue)
-          const match = rawValue.match(/\/validar\/([A-Z0-9-]+)$/)
-          const codigo = match ? match[1] : rawValue
-          console.log('Código extraído:', codigo)
-          onScan(codigo)
+          // O QR agora contém o JWT diretamente — sem regex, sem URL
+          onScan(rawValue)
           return
         }
       }
@@ -113,14 +109,8 @@ export function QRScanner({ onScan, onFechar }: QRScannerProps) {
           </div>
         ) : (
           <div className="relative w-full max-w-sm px-4">
-            <video
-              ref={videoRef}
-              className="w-full rounded-2xl"
-              playsInline
-              muted
-            />
+            <video ref={videoRef} className="w-full rounded-2xl" playsInline muted />
             <canvas ref={canvasRef} className="hidden" />
-            {/* Mira */}
             <div className="absolute inset-4 pointer-events-none">
               <div className="w-full h-full border-2 border-white/40 rounded-xl relative">
                 <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-xl" />

@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
+import QRCode from 'qrcode'
 
 const HMAC_SECRET = process.env.SEAL_HMAC_SECRET!
 
@@ -18,7 +19,7 @@ export type SealData = {
   }
 }
 
-// Gera código curto legível ex: AQ-8F3K2P
+// Código legível — aparece como TEXTO no selo, não no QR
 export function generateCodigoQr(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   let codigo = 'AQ-'
@@ -28,7 +29,7 @@ export function generateCodigoQr(): string {
   return codigo
 }
 
-// Gera o token JWT assinado com HMAC-SHA256
+// Gera o JWT assinado com HMAC-SHA256
 export function generateSealToken(data: SealData): string {
   const payload = {
     eid: data.entrega_id,
@@ -59,7 +60,20 @@ export function validateSealToken(token: string): SealData | null {
   }
 }
 
-// Gera o HMAC do ID-pai para galões do atacado
+// NOVO: QR gerado localmente como base64 — conteúdo é o JWT, nunca exposto em URL
+export async function generateQRImage(token: string): Promise<string> {
+  return await QRCode.toDataURL(token, {
+    errorCorrectionLevel: 'H',
+    margin: 2,
+    width: 300,
+    color: {
+      dark: '#000000',
+      light: '#ffffff',
+    },
+  })
+}
+
+// HMAC do ID-pai para galões do atacado
 export function generateIdPai(galao_id: string): string {
   return crypto
     .createHmac('sha256', HMAC_SECRET)

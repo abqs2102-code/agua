@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { generateSealToken, generateCodigoQr, type SealData } from '@/lib/services/sealService'
+import {
+  generateSealToken,
+  generateCodigoQr,
+  generateQRImage,
+  type SealData,
+} from '@/lib/services/sealService'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +17,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'entrega_id obrigatório' }, { status: 400 })
     }
 
-    // Buscar dados completos da entrega
     const { data: entrega, error: entregaError } = await supabase
       .from('entregas')
       .select(`
@@ -34,7 +38,6 @@ export async function POST(request: NextRequest) {
 
     const cliente = (entrega.clientes as any)
 
-    // Buscar galão vinculado ao cliente
     const { data: galao, error: galaoError } = await supabase
       .from('galoes')
       .select('id, numero_serie')
@@ -44,10 +47,12 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (galaoError || !galao) {
-      return NextResponse.json({ error: 'Nenhum galão em uso para este cliente' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Nenhum galão em uso para este cliente' },
+        { status: 404 }
+      )
     }
 
-    // Montar dados do selo
     const sealData: SealData = {
       entrega_id: entrega.id,
       galao_id: galao.id,
@@ -57,10 +62,13 @@ export async function POST(request: NextRequest) {
       endereco: cliente.endereco_json,
     }
 
-    // Gerar token JWT e código curto
+    // JWT assinado — este é o conteúdo do QR
     const token = generateSealToken(sealData)
-    
-    // Gerar código único (retry se já existir)
+
+    // QR gerado localmente como base64 — nenhuma URL exposta
+    const qrImage = await generateQRImage(token)
+
+    // Código legível para identificação humana no verso do selo
     let codigoQr = generateCodigoQr()
     let tentativas = 0
     while (tentativas < 5) {
@@ -74,7 +82,6 @@ export async function POST(request: NextRequest) {
       tentativas++
     }
 
-    // Salvar selo no banco
     const { data: selo, error: seloError } = await supabase
       .from('selos')
       .insert({
@@ -92,7 +99,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: seloError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ selo, token, codigo_qr: codigoQr })
+    // qrImage retornado para o componente de impressão — nunca vai a URL pública
+    return NextResponse.json({ selo, qrImage, codigo_qr: codigoQr })
 
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { validateSealToken } from '@/lib/services/sealService'
 
 export async function POST(
   request: NextRequest,
@@ -7,23 +8,56 @@ export async function POST(
 ) {
   try {
     const supabase = await createClient()
-    const { id: codigoQr } = await params
+    const { id: entrega_id_atual } = await params  // entrega_id vem pela URL
+    const { token } = await request.json()         // JWT vem no body
 
-    // Buscar selo pelo código curto
+    if (!token) {
+      return NextResponse.json(
+        { error: 'token é obrigatório.' },
+        { status: 400 }
+      )
+    }
+
+    // 1. Verifica assinatura HMAC — se inválido, rejeita imediatamente
+    const payload = validateSealToken(token)
+    if (!payload) {
+      return NextResponse.json(
+        { error: 'Selo inválido ou adulterado.' },
+        { status: 400 }
+      )
+    }
+
+    // 2. VERIFICAÇÃO CENTRAL: selo pertence a esta entrega?
+    if (payload.entrega_id !== entrega_id_atual) {
+      await supabase
+        .from('entregas')
+        .update({ status: 'multa' })
+        .eq('id', entrega_id_atual)
+
+      return NextResponse.json(
+        {
+          sucesso: false,
+          fraude: true,
+          error: `Este galão pertence ao cliente "${payload.cliente_nome}". Entrega bloqueada.`,
+        },
+        { status: 403 }
+      )
+    }
+
+    // 3. Busca o selo pelo entrega_id do payload (não do input)
     const { data: selo, error: seloError } = await supabase
       .from('selos')
-      .select('id, entrega_id, token_jwt, status, consumido_em, galao_id')
-      .eq('codigo_qr', decodeURIComponent(codigoQr))
+      .select('id, status, consumido_em')
+      .eq('entrega_id', payload.entrega_id)
       .single()
 
     if (seloError || !selo) {
       return NextResponse.json(
-        { error: 'Código QR não reconhecido.' },
+        { error: 'Selo não encontrado no banco.' },
         { status: 404 }
       )
     }
 
-    // Verificar se já foi consumido
     if (selo.consumido_em) {
       return NextResponse.json(
         { error: 'Este selo já foi utilizado anteriormente.' },
@@ -31,7 +65,6 @@ export async function POST(
       )
     }
 
-    // Verificar se o selo está cancelado
     if (selo.status === 'cancelado') {
       return NextResponse.json(
         { error: 'Este selo foi cancelado.' },
@@ -39,36 +72,22 @@ export async function POST(
       )
     }
 
-    // Buscar dados da entrega vinculada ao selo
-    const { data: entrega } = await supabase
-      .from('entregas')
-      .select('id, cliente_id, clientes(nome, endereco_json)')
-      .eq('id', selo.entrega_id)
-      .single()
-
-    const cliente = (entrega?.clientes as any)
-
-    // Marcar selo como consumido
+    // 4. Tudo OK — consome o token (uso único)
+    const agora = new Date().toISOString()
     await supabase
       .from('selos')
-      .update({
-        status: 'ok',
-        consumido_em: new Date().toISOString(),
-        validado_em: new Date().toISOString(),
-      })
+      .update({ status: 'ok', consumido_em: agora, validado_em: agora })
       .eq('id', selo.id)
 
     return NextResponse.json({
       sucesso: true,
-      entrega_id: selo.entrega_id,
-      cliente_nome: cliente?.nome,
-      endereco: cliente?.endereco_json,
+      entrega_id: payload.entrega_id,
+      cliente_nome: payload.cliente_nome,
+      endereco: payload.endereco,
+      numero_serie: payload.numero_serie,
     })
 
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

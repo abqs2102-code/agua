@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Printer } from 'lucide-react'
 
 type SeloPreviewProps = {
-  token: string
-  codigoQr: string
+  qrImage: string   // base64 gerado pelo servidor — substitui o token
+  codigoQr: string  // número de série legível, exibido como TEXTO no selo
   numeroSerie: string
   clienteNome: string
   endereco: {
@@ -21,6 +21,7 @@ type SeloPreviewProps = {
 }
 
 function SeloImpresso({
+  qrImage,
   codigoQr,
   numeroSerie,
   clienteNome,
@@ -28,11 +29,6 @@ function SeloImpresso({
   dataEntrega,
   componentRef,
 }: SeloPreviewProps & { componentRef: React.RefObject<HTMLDivElement | null> }) {
-  // QR Code contém apenas o código curto — fácil de ler
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-  `https://agua-alpha.vercel.app/validar/${codigoQr}`
-)}&ecc=H&margin=2`
-
   return (
     <div
       ref={componentRef}
@@ -49,20 +45,22 @@ function SeloImpresso({
         boxSizing: 'border-box',
       }}
     >
-      {/* QR Code */}
+      {/* QR Code — conteúdo é JWT opaco, não uma URL com código exposto */}
       <div style={{ flexShrink: 0 }}>
         <img
-          src={qrUrl}
+          src={qrImage}
           alt="QR Code"
           style={{ width: '2.8cm', height: '2.8cm', display: 'block' }}
         />
+        {/* Código legível apenas como referência visual — não é o segredo */}
         <p style={{
           fontSize: '4.5pt',
           textAlign: 'center',
           fontFamily: 'monospace',
           color: '#999',
+          marginTop: '0.5mm',
         }}>
-          {numeroSerie}
+          {codigoQr}
         </p>
       </div>
 
@@ -79,7 +77,13 @@ function SeloImpresso({
           Aqua<span style={{ color: '#0D9278' }}>Gestão</span>
         </div>
 
-        <p style={{ fontSize: '7pt', fontWeight: 'bold', color: '#061525', marginBottom: '1mm', lineHeight: 1.2 }}>
+        <p style={{
+          fontSize: '7pt',
+          fontWeight: 'bold',
+          color: '#061525',
+          marginBottom: '1mm',
+          lineHeight: 1.2,
+        }}>
           {clienteNome}
         </p>
 
@@ -98,7 +102,7 @@ function SeloImpresso({
           marginTop: '1.5mm',
           lineHeight: 1.2,
         }}>
-          Selo de segurança — uso único
+          Série: {numeroSerie} · Uso único
         </p>
       </div>
     </div>
